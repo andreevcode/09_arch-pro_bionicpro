@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { useKeycloak } from '@react-keycloak/web';
+// Импортируем наш живой объект keycloak из App.tsx
+import { keycloak } from '../App';
 
-const ReportPage: React.FC = () => {
-  const { keycloak, initialized } = useKeycloak();
+// Добавляем описание того, что страница принимает на вход (props)
+interface ReportPageProps {
+  authenticated: boolean;
+}
+
+const ReportPage: React.FC<ReportPageProps> = ({ authenticated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const downloadReport = async () => {
-    if (!keycloak?.token) {
+    if (!keycloak.token) {
       setError('Not authenticated');
       return;
     }
@@ -22,7 +27,9 @@ const ReportPage: React.FC = () => {
         }
       });
 
-      
+      // Просто для проверки в консоли, что запрос ушел
+      console.log("Ответ от бэкенда:", response.status);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -30,11 +37,7 @@ const ReportPage: React.FC = () => {
     }
   };
 
-  if (!initialized) {
-    return <div>Loading...</div>;
-  }
-
-  if (!keycloak.authenticated) {
+  if (!authenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
         <button
