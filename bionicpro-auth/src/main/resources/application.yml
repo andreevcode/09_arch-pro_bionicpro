@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: bionicpro-auth
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: reports-bff-auth
+            client-secret: 1h3WfuhlvdQyMNqkz4SSNPZpMyt8sCT7
+            scope: openid, profile, email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:8080/realms/reports-realm
+            user-name-attribute: preferred_username
+
+server:
+  port: 8081 # Наш BFF будет работать на этом порту
+  servlet:
+    session:
+      cookie:
+        http-only: true   # Запрещает доступ к куке из JS (защита от XSS)
+        secure: true      # Кука передается только по HTTPS
+        same-site: lax    # Защита от CSRF
+
+logging:
+  level:
+    # Видеть, как работают фильтры безопасности и проверки state/PKCE
+    org.springframework.security: DEBUG
+    # Видеть все HTTP-запросы, которые Spring шлет в Keycloak (обмен кода, рефреш)
+    # по факту, видим не все, например ручка /token так и не логировалась
+    org.springframework.web.client.RestTemplate: DEBUG
+
+    # Логируем сам процесс обмена токенов в Spring Security
+    org.springframework.security.oauth2.client.endpoint: DEBUG
+
+    # Логируем сырые HTTP-запросы и ответы внутри OAuth2 клиента
+    org.springframework.http.client.support: DEBUG
