@@ -1,2 +1,9 @@
 /postgres-keycloak-data
 2024__yandex-architecture-sso.code-workspace
+**/.local*/
+**/.local*
+**/.env*/
+**/.env*
+.env*
+.env.secrets*
+**/.env.secrets*
