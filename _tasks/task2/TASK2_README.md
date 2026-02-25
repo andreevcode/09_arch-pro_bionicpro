@@ -102,8 +102,8 @@
       );
    ```
    - DDL и наливку данных сделаем 1 раз, при создании volume через `docker-entrypoint-initdb.d`;
-   - скрипт генерации данных [02-data.sql](../../postgres_oltp/init-db-scripts/02-data.sql) генерит данные для пользователей ldap, имитируя случайные данные и периоды с ошибками;
-   - все скрипты тут: [postgres-oltp/init-db-scripts](../../postgres_oltp/init-db-scripts) 
+   - скрипт генерации данных [02-data.sql](../../postgres_oltp-init/02-data.sql) генерит данные для пользователей ldap, имитируя случайные данные и периоды с ошибками;
+   - все скрипты тут: [postgres_oltp-init](../../postgres_oltp-init/) 
 
 2. Структура данных OLAP DWH на базе ClickHouse.
    - `staging` слой позволяет затем быстро джойнить данные на этапе трансформации: 
