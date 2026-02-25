@@ -13,7 +13,7 @@ services:
     volumes:
       - postgres_oltp_data:/var/lib/postgresql/data
       # Прокидываем папку со скриптами инициализации
-      - ./postgres_oltp/init-db-scripts:/docker-entrypoint-initdb.d
+      - ./postgres_oltp-init:/docker-entrypoint-initdb.d
     networks:
       - bionicpro-network
 
