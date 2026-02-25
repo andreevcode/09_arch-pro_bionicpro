@@ -4,6 +4,8 @@ import ReportPage from './components/ReportPage';
 const App: React.FC = () => {
     const [initialized, setInitialized] = useState(false);
     const [authenticated, setAuthenticated] = useState(false);
+    // Добавляем состояние для данных пользователя
+    const [user, setUser] = useState<{ username: string } | null>(null);
 
     useEffect(() => {
         // Проверяем, залогинен ли пользователь через наш BFF
@@ -12,10 +14,13 @@ const App: React.FC = () => {
         })
             .then(res => {
                 if (res.ok) {
-                    setAuthenticated(true);
-                } else {
-                    setAuthenticated(false);
+                    return res.json(); // Ожидаем JSON с данными пользователя
                 }
+                throw new Error('Not authenticated');
+            })
+            .then(data => {
+                setUser(data); // Сохраняем username пользователя
+                setAuthenticated(true);
                 setInitialized(true);
             })
             .catch(() => {
@@ -34,7 +39,8 @@ const App: React.FC = () => {
 
     return (
         <div className="App">
-            <ReportPage authenticated={authenticated} />
+            {/* Передаем данные пользователя в компонент страницы */}
+            <ReportPage authenticated={authenticated} user={user} />
         </div>
     );
 };
