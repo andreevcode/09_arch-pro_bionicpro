@@ -20,12 +20,12 @@ import org.springframework.web.client.RestTemplate;
 public class ProxyController {
     private final Logger log = LoggerFactory.getLogger(ProxyController.class);
 
-    @Value("${REPORTS_BACKEND_URL:http://reports-backend:8000}")
+    @Value("${REPORTS_BACKEND_URL:http://bionicpro-reports:8082}")
     private String reportsBackendUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @GetMapping("/reports/**")
+    @GetMapping("/v1/reports/**")
     public ResponseEntity<?> proxyReports(
             HttpServletRequest request,
             @RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient authorizedClient) {
@@ -34,16 +34,24 @@ public class ProxyController {
         // 1. Достаем Access Token из авторизованного клиента (он лежит в сессии)
         String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
+        // Важно: Сохраняем query string (user_id, даты), иначе бэкенд их не увидит
+        String queryString = request.getQueryString() != null ? "?" + request.getQueryString() : "";
+
         // 2. Формируем запрос к реальному бэкенду (localhost:8000)
-        String backendUrl = reportsBackendUrl + request.getRequestURI().replace("/api", "");
+        // Если бэкенд ожидает /api/v1/reports, то заменяем аккуратно.
+        // Если мы в BFF вызвали /api/v1/reports, то URI будет "/api/v1/reports"
+        String backendUrl = reportsBackendUrl + request.getRequestURI() + queryString;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken); // Приклеиваем токен!
 
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
         log.info("Sending request to backend with headers: {}", headers);
         // 4. Проксируем и возвращаем ответ фронтенду
-        return restTemplate.exchange(backendUrl, HttpMethod.GET, entity, byte[].class);
+        return restTemplate.exchange(
+                backendUrl,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                byte[].class
+        );
     }
 }
