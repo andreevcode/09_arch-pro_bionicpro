@@ -31,7 +31,7 @@ services:
       - start-dev
       - --import-realm
     volumes:
-      - ./keycloak/realm-export1.4_with_no_ldap.json:/opt/keycloak/data/import/realm-export.json
+      - ./keycloak/realm-export1.4_with_ldap.json:/opt/keycloak/data/import/realm-export.json
     ports:
       - "8080:8080"
     depends_on:

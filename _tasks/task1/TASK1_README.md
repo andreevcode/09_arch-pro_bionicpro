@@ -333,28 +333,38 @@
      | prothetic_user   | prothetic_user          |
 2. Настроить User Federation в Keycloak через нового провайдера LDAP с маппингом ролей:
    - через импорт нового конфига [realm-export1.4_with_ldap.json](../../keycloak/realm-export1.4_with_ldap.json);
-   - после импорта realm лучше выполнить **Sync all users** и **Sync LDAP Roles to Keycloak** в Keycloak Admin (User federation → ldap), чтобы подтянуть пользователей и роли;
-   - **этот способ может не сработать**:
-      - конфиг может загрузиться, User Federation и маппинг ролей создадутся, но смаппятся не все настройки, и, возможно, конфиг не был полным;
-      - <img src="images_4_ldap/01_keycloak_user_federation.png" width="300"/>
-      - в итоге не получалось залогиниться ни под кем из пользователей ldap:
-      - <img src="images_4_ldap/02_ldap_login_error.png" width="700"/>
+   - пользователей и роли должны заработать сразу, но можно после импорта realm выполнить **Sync all users** и **Sync LDAP Roles to Keycloak** в Keycloak Admin (User federation → ldap);
 3. Альтернативный алгоритм настройки через UI Keycloak Федерации с нуля (тогда следует использовать предыдущий конфиг Keycloak или [realm-export1.4_with_no_ldap.json](../../keycloak/realm-export1.4_with_no_ldap.json)):
    - a. Создание провайдера.
       - Realm **reports-realm** → User federation → Add provider → **ldap**.
-      - **Пароль администратора:** задаётся переменной `LDAP_ADMIN_PASSWORD` из конфиге `docker-compose` (`adminpassword`).
+      - **Пароль администратора:** задаётся переменной .
       - Keycloak использует тот же пароль для подключения к LDAP; при смене пароля обновите настройки User Federation в Keycloak (realm **reports-realm** → User federation → ldap → Settings → Bind credential).
-      - Vendor: **Other**, Connection URL: `ldap://openldap:389`, Bind DN: `cn=admin,dc=example,dc=com`, Bind credential: значение `LDAP_ADMIN_PASSWORD` (например, admin).
-      - Users DN: `ou=People,dc=example,dc=com`, RDN: `uid`, UUID: `uid`, User object classes: `inetOrgPerson, top`.
-   - b. Создание маппера ролей:
-      - В настройках провайдера ldap → Mappers → создать маппер **role-ldap-mapper**: Roles DN `ou=Groups,dc=example,dc=com`, Role name LDAP attribute `cn`, Mode **LDAP_ONLY**.
+      - **General options**:
+        - UI display name: ldap
+        - Vendor: **Other**
+      - **Connection and authentication settings**:
+        - Connection URL: `ldap://openldap:389`
+        - Bind type: **simple** 
+        - Bind DN: `cn=admin,dc=example,dc=com` 
+        - Bind credentials: значение `LDAP_ADMIN_PASSWORD` из конфиге `docker-compose` (`adminpassword`)
+      - **LDAP searching and updating**
+        - Edit mode: **READ_ONLY** 
+        - Users DN: `ou=People,dc=example,dc=com`
+        - Username LDAP attribute: `cn` (было по дефолту)
+        - RDN LDAP attribute: `uid`
+        - UUID LDAP attribute: `uid`
+        - User object classes: `inetOrgPerson, top`.
+   - b. Создание маппера ролей в настройках провайдера: ldap → Mappers → создать маппер **role-ldap-mapper**: 
+     - Name: `custom-role-ldap-mapper`
+     - LDAP Roles DN `ou=Groups,dc=example,dc=com`
+     - Role Name LDAP Attribute: `cn`(было по дефолту)
+     - Mode **LDAP_ONLY** (было по дефолту)
 
 ### 4.2 Запуск и тестирование
-1. Удалим volume Keycloak хранилища из Задачи 3 `docker compose -f docker-compose1.3.yml down -v`, чтобы загрузить Keycloak с новым конфигом.
-2. Стартуем все заново `docker compose -f docker-compose1.4.yml up -d` (по умолчанию - конфиг keykloak без импорта ldap-провайдера):
-   - запустится 5 контейнеров: `openldap`, `frontend` с новой версией фронта, `keycloak`, хранилище postgres `keycloak_db` и `bionicpro-auth`;
-3. Настраиваем User Federation по алгоритму выше.
-4. Пробуем залогиниться под одним из пользователей ldap:
+1. Удалим volume Keycloak хранилища из Задачи 3 `docker compose -f docker-compose1.3.yml down -v`, чтобы загрузить Keycloak с новым конфигом. Либо пропустить шаги 1-2 и настроить User Federation в UI по алгоритму выше.
+2. Стартуем все заново `docker compose -f docker-compose1.4.yml up -d`:
+   - запустится 5 контейнеров: `openldap`, `frontend` с новой версией фронта, `keycloak` (по умолчанию) c ldap-провайдером, хранилище postgres `keycloak_db` и `bionicpro-auth`;
+3. Пробуем залогиниться под одним из пользователей ldap:
    - переходим в Keycloak, вводим креды из LDAP, например, `jane.smith/password` и под капотом Keycloak должен их проверить через LDAP;
    - далее стандартный флоу по получению токенов Алисой и отрисовкой бизнес-кнопки на Бобе;
    - ответ ручки `/api/user/me` после LDAP авторизации на Бобе:
@@ -440,6 +450,6 @@
    - <img src="yandex_oauth20/11_results_logged_yandex_user_me_endpoint.png" width="900">
    - в списке users в Keycloak тоже можно наблюдать этого же пользователя, то есть он добавлен в базу;
    - <img src="yandex_oauth20/12_results_logged_yandex_user.png" width="900">
-5. Экспортированный конфиг `keyckloak` после 6 задания  (бeз LDAP): [keycloak-results-export.json](../../keycloak/keycloak-results-export.json)
+5. Экспортированный конфиг `keyckloak` после 6 задания: [keycloak-results-export.json](../../keycloak/keycloak-results-export.json)
 
    

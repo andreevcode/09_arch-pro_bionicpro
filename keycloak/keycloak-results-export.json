@@ -1567,6 +1567,141 @@
         "allow-default-scopes" : [ "true" ]
       }
     } ],
+    "org.keycloak.storage.UserStorageProvider" : [ {
+      "id" : "HKX_o1uERVS49ga4uMvSOA",
+      "name" : "ldap",
+      "providerId" : "ldap",
+      "subComponents" : {
+        "org.keycloak.storage.ldap.mappers.LDAPStorageMapper" : [ {
+          "id" : "c9034c17-be93-4489-89c7-0e40aeba4c60",
+          "name" : "last name",
+          "providerId" : "user-attribute-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "ldap.attribute" : [ "sn" ],
+            "is.mandatory.in.ldap" : [ "true" ],
+            "always.read.value.from.ldap" : [ "true" ],
+            "read.only" : [ "true" ],
+            "user.model.attribute" : [ "lastName" ]
+          }
+        }, {
+          "id" : "692a23d0-7e47-4d83-9350-d1cfa986dc1a",
+          "name" : "username",
+          "providerId" : "user-attribute-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "ldap.attribute" : [ "uid" ],
+            "is.mandatory.in.ldap" : [ "true" ],
+            "read.only" : [ "true" ],
+            "always.read.value.from.ldap" : [ "false" ],
+            "user.model.attribute" : [ "username" ]
+          }
+        }, {
+          "id" : "8f72f32d-85ba-47e0-80b6-e18febd16cf7",
+          "name" : "Kerberos principal attribute mapper",
+          "providerId" : "kerberos-principal-attribute-mapper",
+          "subComponents" : { },
+          "config" : { }
+        }, {
+          "id" : "cd3d0337-5ada-47dc-aeb7-a71bcd9dbd95",
+          "name" : "email",
+          "providerId" : "user-attribute-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "ldap.attribute" : [ "mail" ],
+            "is.mandatory.in.ldap" : [ "false" ],
+            "read.only" : [ "true" ],
+            "always.read.value.from.ldap" : [ "false" ],
+            "user.model.attribute" : [ "email" ]
+          }
+        }, {
+          "id" : "bae12829-5232-46eb-9caf-dedc936ee5f9",
+          "name" : "custom-role-ldap-mapper",
+          "providerId" : "role-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "mode" : [ "LDAP_ONLY" ],
+            "membership.attribute.type" : [ "DN" ],
+            "roles.dn" : [ "ou=Groups,dc=example,dc=com" ],
+            "user.roles.retrieve.strategy" : [ "LOAD_ROLES_BY_MEMBER_ATTRIBUTE" ],
+            "membership.ldap.attribute" : [ "member" ],
+            "membership.user.ldap.attribute" : [ "uid" ],
+            "role.name.ldap.attribute" : [ "cn" ],
+            "memberof.ldap.attribute" : [ "memberOf" ],
+            "use.realm.roles.mapping" : [ "true" ],
+            "role.object.classes" : [ "groupOfNames" ]
+          }
+        }, {
+          "id" : "7a7932f4-2d07-4fda-b2a4-3336fdcf63a9",
+          "name" : "first name",
+          "providerId" : "user-attribute-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "ldap.attribute" : [ "cn" ],
+            "is.mandatory.in.ldap" : [ "true" ],
+            "always.read.value.from.ldap" : [ "true" ],
+            "read.only" : [ "true" ],
+            "user.model.attribute" : [ "firstName" ]
+          }
+        }, {
+          "id" : "d9a849f0-8397-4621-87cd-641c6b5e7dab",
+          "name" : "modify date",
+          "providerId" : "user-attribute-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "ldap.attribute" : [ "modifyTimestamp" ],
+            "is.mandatory.in.ldap" : [ "false" ],
+            "read.only" : [ "true" ],
+            "always.read.value.from.ldap" : [ "true" ],
+            "user.model.attribute" : [ "modifyTimestamp" ]
+          }
+        }, {
+          "id" : "c8831e7c-badb-4961-995c-f0e98e7f505e",
+          "name" : "creation date",
+          "providerId" : "user-attribute-ldap-mapper",
+          "subComponents" : { },
+          "config" : {
+            "ldap.attribute" : [ "createTimestamp" ],
+            "is.mandatory.in.ldap" : [ "false" ],
+            "always.read.value.from.ldap" : [ "true" ],
+            "read.only" : [ "true" ],
+            "user.model.attribute" : [ "createTimestamp" ]
+          }
+        } ]
+      },
+      "config" : {
+        "pagination" : [ "true" ],
+        "fullSyncPeriod" : [ "-1" ],
+        "connectionTrace" : [ "false" ],
+        "startTls" : [ "false" ],
+        "connectionPooling" : [ "true" ],
+        "usersDn" : [ "ou=People,dc=example,dc=com" ],
+        "cachePolicy" : [ "DEFAULT" ],
+        "useKerberosForPasswordAuthentication" : [ "false" ],
+        "importEnabled" : [ "true" ],
+        "enabled" : [ "true" ],
+        "usernameLDAPAttribute" : [ "uid" ],
+        "bindCredential" : [ "adminpassword" ],
+        "changedSyncPeriod" : [ "-1" ],
+        "bindDn" : [ "cn=admin,dc=example,dc=com" ],
+        "vendor" : [ "other" ],
+        "uuidLDAPAttribute" : [ "uid" ],
+        "allowKerberosAuthentication" : [ "false" ],
+        "connectionUrl" : [ "ldap://openldap:389" ],
+        "syncRegistrations" : [ "true" ],
+        "authType" : [ "simple" ],
+        "krbPrincipalAttribute" : [ "krb5PrincipalName" ],
+        "searchScope" : [ "1" ],
+        "useTruststoreSpi" : [ "always" ],
+        "usePasswordModifyExtendedOp" : [ "false" ],
+        "trustEmail" : [ "false" ],
+        "userObjectClasses" : [ "inetOrgPerson, top" ],
+        "removeInvalidUsersEnabled" : [ "true" ],
+        "rdnLDAPAttribute" : [ "uid" ],
+        "editMode" : [ "READ_ONLY" ],
+        "validatePasswordPolicy" : [ "false" ]
+      }
+    } ],
     "org.keycloak.keys.KeyProvider" : [ {
       "id" : "7f8658e5-14f8-4b81-a34e-0c18b16094ba",
       "name" : "hmac-generated-hs512",
