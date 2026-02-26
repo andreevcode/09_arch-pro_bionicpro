@@ -25,7 +25,7 @@ public class ProxyController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @GetMapping("/v1/reports/**")
+    @GetMapping({"/v1/reports/**", "/v2/reports/**"})
     public ResponseEntity<?> proxyReports(
             HttpServletRequest request,
             @RegisteredOAuth2AuthorizedClient("keycloak") OAuth2AuthorizedClient authorizedClient) {
@@ -38,8 +38,8 @@ public class ProxyController {
         String queryString = request.getQueryString() != null ? "?" + request.getQueryString() : "";
 
         // 2. Формируем запрос к реальному бэкенду (localhost:8000)
-        // Если бэкенд ожидает /api/v1/reports, то заменяем аккуратно.
-        // Если мы в BFF вызвали /api/v1/reports, то URI будет "/api/v1/reports"
+        // Если бэкенд ожидает /api/vX/reports, то заменяем аккуратно.
+        // Если мы в BFF вызвали /api/vX/reports, то URI будет "/api/vX/reports"
         String backendUrl = reportsBackendUrl + request.getRequestURI() + queryString;
 
         HttpHeaders headers = new HttpHeaders();
