@@ -6,7 +6,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -32,5 +34,21 @@ public class ReportRepository {
                         rs.getInt("critical_errors")
                 ),
                 userId, start, end);
+    }
+
+    public Optional<LocalDateTime> findMaxUpdatedAt(String userId, LocalDate start, LocalDate end) {
+        String sql = """
+            SELECT MAX(updated_at)
+            FROM daily_user_reports
+            WHERE user_id = ? AND report_date BETWEEN ? AND ?
+            """;
+
+        LocalDateTime maxUpdated = jdbcTemplate.queryForObject(
+                sql,
+                LocalDateTime.class,
+                userId, start, end
+        );
+
+        return Optional.ofNullable(maxUpdated);
     }
 }

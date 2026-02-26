@@ -19,3 +19,18 @@ spring:
         jwt:
           # URL, по которому Spring сам скачает публичные ключи для проверки подписи
           issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/bionicpro}
+
+app:
+  reports:
+    # Соль для генерации безопасных ссылок
+    link-salt: ${REPORT_LINK_SALT:default_local_secret_salt_999}
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9200}
+  access-key: ${MINIO_ACCESS_KEY:admin}
+  secret-key: ${MINIO_SECRET_KEY:admin_password}
+  bucket: ${MINIO_BUCKET:reports}
+
+cdn:
+  # Базовый URL, куда фронтенд пойдет скачивать файл
+  base-url: ${CDN_BASE_URL:http://localhost:8095/cdn}

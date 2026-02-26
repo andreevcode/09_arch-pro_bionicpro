@@ -1,7 +1,5 @@
 package ru.andreevcode.bionicpro.reports.dto;
 
-import lombok.Builder;
-import lombok.Data;
 import java.time.LocalDate;
 
 public record ReportResponse(

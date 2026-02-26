@@ -37,9 +37,13 @@ dependencies {
     // Зависимости для клиента ClickHouse (Apache HTTP Client и LZ4 compression)
     implementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
     implementation 'org.lz4:lz4-java:1.8.0'
+    // Дополнительно: драйверу ClickHouse часто нужен jackson для JSON-запросов
+    // Вместо прямой зависимости от jackson-databind используем стартер
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
-    // Дополнительно: драйверу часто нужен этот пакет для JSON-запросов
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    // Клиент для работы с S3 хранилищами
+    implementation 'io.minio:minio:8.5.7'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
