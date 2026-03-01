@@ -8,6 +8,7 @@ interface ReportData {
   maxNoiseLevel: number;
   batteryDrain: number;
   errors: number;
+  updatedAt: string;
 }
 
 interface ReportPageProps {
@@ -65,8 +66,8 @@ const ReportPage: React.FC<ReportPageProps> = ({ authenticated, user }) => {
     }
   };
 
-  // Новая ручка (v2) - получение через CDN (Nginx)
-  const downloadReportCDN = async () => {
+  // Новая ручка (v2) - получение через CDN (Nginx). Добавлен параметр isStream
+  const downloadReportCDN = async (isStream: boolean = false) => {
     if (!user) return;
 
     try {
@@ -79,6 +80,11 @@ const ReportPage: React.FC<ReportPageProps> = ({ authenticated, user }) => {
         start_date: startDate,
         end_date: endDate
       });
+
+      // Добавляем параметр stream, если запрошена потоковая витрина
+      if (isStream) {
+        params.append('stream', 'true');
+      }
 
       // Шаг 1: Идем в v2 за ссылкой на файл
       const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/v2/reports?${params.toString()}`, {
@@ -166,8 +172,8 @@ const ReportPage: React.FC<ReportPageProps> = ({ authenticated, user }) => {
             </div>
           </div>
 
-          {/* Блок с двумя кнопками */}
-          <div className="flex gap-4 mb-4">
+          {/* Обновленный блок с тремя кнопками */}
+          <div className="flex flex-wrap gap-4 mb-4">
             <button
                 onClick={downloadReport}
                 disabled={loading}
@@ -175,17 +181,27 @@ const ReportPage: React.FC<ReportPageProps> = ({ authenticated, user }) => {
                     loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
-              {loading ? 'Processing...' : 'Get Report (Direct v1)'}
+              {loading ? 'Processing...' : 'Get Report v1 (Direct OLTP batch)'}
             </button>
 
             <button
-                onClick={downloadReportCDN}
+                onClick={() => downloadReportCDN(false)}
                 disabled={loading}
                 className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${
                     loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
-              {loading ? 'Processing...' : 'Get Report (CDN v2)'}
+              {loading ? 'Processing...' : 'Get Report v2 (CDN OLTP batch)'}
+            </button>
+
+            <button
+                onClick={() => downloadReportCDN(true)}
+                disabled={loading}
+                className={`px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+            >
+              {loading ? 'Processing...' : 'Get Report v2 (CDN OLTP stream)'}
             </button>
           </div>
 
@@ -206,6 +222,7 @@ const ReportPage: React.FC<ReportPageProps> = ({ authenticated, user }) => {
                     <th className="border p-2 text-center">Max Noise</th>
                     <th className="border p-2 text-center">Battery Drain</th>
                     <th className="border p-2 text-center">Errors</th>
+                    <th className="border p-2 text-center">Updated At</th>
                   </tr>
                   </thead>
                   <tbody>
@@ -217,6 +234,9 @@ const ReportPage: React.FC<ReportPageProps> = ({ authenticated, user }) => {
                         <td className="border p-2 text-center">{report.maxNoiseLevel.toFixed(2)}</td>
                         <td className="border p-2 text-center">{report.batteryDrain}</td>
                         <td className="border p-2 text-center text-red-600 font-semibold">{report.errors}</td>
+                        <td className="border p-2 text-center text-xs text-gray-500">
+                          {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : '-'}
+                        </td>
                       </tr>
                   ))}
                   </tbody>
