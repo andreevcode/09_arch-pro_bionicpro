@@ -31,6 +31,7 @@ public class ReportControllerV2 {
             @RequestParam @NotBlank String user_id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start_date,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end_date,
+            @RequestParam(defaultValue = "false") boolean stream,
             @AuthenticationPrincipal Jwt jwt
     ) {
         String tokenUserId = jwt.getClaim("preferred_username");
@@ -39,8 +40,8 @@ public class ReportControllerV2 {
             throw new ReportAccessDeniedException(tokenUserId, user_id);
         }
 
-        log.info("V2: Requesting report URL for user={} between {} and {}", tokenUserId, start_date, end_date);
-        ReportFileUrlResponse response = reportServiceV2.getReportUrl(user_id, start_date, end_date);
+        log.info("V2: Requesting report URL for user={} between {} and {}, stream={}", tokenUserId, start_date, end_date, stream);
+        ReportFileUrlResponse response = reportServiceV2.getReportUrl(user_id, start_date, end_date, stream);
 
         return ResponseEntity.ok(response);
     }

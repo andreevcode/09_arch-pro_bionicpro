@@ -22,6 +22,6 @@ public class ReportService {
         // Здесь можно добавить дополнительную логику, например,
         // кэширование или проверку существования пользователя в системе
 
-        return reportRepository.findReports(userId, start, end);
+        return reportRepository.findReports(userId, start, end, false);
     }
 }

@@ -21,26 +21,27 @@ public class ReportServiceV2 {
     private final ReportRepository reportRepository;
     private final ReportFileLinkGenerator linkGenerator;
     private final MinioService minioService;
-    private final ObjectMapper objectMapper; // Для конвертации List<ReportResponse> в JSON
+    private final ObjectMapper objectMapper;
 
     @Value("${cdn.base-url}")
     private String cdnBaseUrl;
 
-    public ReportFileUrlResponse getReportUrl(String userId, LocalDate startDate, LocalDate endDate) {
+    public ReportFileUrlResponse getReportUrl(String userId, LocalDate startDate, LocalDate endDate, boolean stream) {
         // 1. Узнаем дату последнего обновления (Cache Busting)
-        LocalDateTime maxUpdatedAt = reportRepository.findMaxUpdatedAt(userId, startDate, endDate)
+        LocalDateTime maxUpdatedAt = reportRepository.findMaxUpdatedAt(userId, startDate, endDate, stream)
                 .orElseThrow(() -> new RuntimeException("No data found for the requested period"));
 
         // 2. Генерируем уникальный ключ файла по уникальным параметрам (userId, startDate, endDate) + соль +
-        // maxUpdatedAt (добавка для смены ключа, чтобы инвалидировать файлы кэша в CDN в случае пересчета отчета в OLAP)
-        String objectKey = linkGenerator.generateObjectKey(userId, startDate, endDate, maxUpdatedAt);
+        // maxUpdatedAt. Добавляем префикс, чтобы ключи кэша стрима и батча не пересекались!
+        String baseObjectKey = linkGenerator.generateObjectKey(userId, startDate, endDate, maxUpdatedAt);
+        String objectKey = (stream ? "stream_" : "batch_") + baseObjectKey;
 
         // 3. Проверяем, есть ли уже такой файл в MinIO
         if (!minioService.isObjectExists(objectKey)) {
             log.info("Cache miss for {}. Generating new report...", objectKey);
 
-            // Если нет — вытягиваем данные из БД (используем старый метод репозитория)
-            List<ReportResponse> reports = reportRepository.findReports(userId, startDate, endDate);
+            // Если нет — вытягиваем данные из БД (используем нужную витрину)
+            List<ReportResponse> reports = reportRepository.findReports(userId, startDate, endDate, stream);
 
             try {
                 // Превращаем в JSON
