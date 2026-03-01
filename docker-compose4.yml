@@ -14,6 +14,13 @@ services:
       - postgres_oltp_data:/var/lib/postgresql/data
       # Прокидываем папку со скриптами инициализации
       - ./postgres_oltp-init:/docker-entrypoint-initdb.d
+    # подготовка к логической репликации через debezium
+    command: [
+      "postgres",
+      "-c", "wal_level=logical",
+      "-c", "max_replication_slots=4",
+      "-c", "max_wal_senders=4"
+    ]
     networks:
       - bionicpro-network
 
@@ -207,6 +214,91 @@ services:
     networks:
       - bionicpro-network
 
+  kafka:
+    image: apache/kafka:3.7.0
+#    image: apache/kafka:4.2.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # Настройки для работы в один узел (без репликации):
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - bionicpro-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8180:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - bionicpro-network
+
+  debezium_oltp:
+    image: quay.io/debezium/connect:3.4 # Официальный образ с коннекторами
+    container_name: debezium_oltp
+    depends_on:
+      - kafka
+      - postgres_oltp
+    ports:
+      - "8083:8083" # Порт для отправки REST-запросов на создание коннекторов
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+    networks:
+      - bionicpro-network
+
+  debezium_init:
+    image: curlimages/curl:latest
+    container_name: debezium_init
+    depends_on:
+      - debezium_oltp
+    volumes:
+      - ./debezium/postgres_oltp-connector.json:/tmp/postgres_oltp-connector.json
+    # Скрипт ждет 200 OK от Debezium, а затем делает POST-запрос с конфигом
+    networks:
+      - bionicpro-network
+    command: >
+      sh -c "
+        echo 'Ожидаем запуска Debezium API...'
+        # Пингуем эндпоинт, пока не получим HTTP 200
+        while [ $$(curl -s -o /dev/null -w %{http_code} http://debezium_oltp:8083/connectors) -ne 200 ] ; do 
+          echo 'Debezium еще не готов, ждем 2 секунды...'
+          sleep 2
+        done
+        echo 'Debezium API доступен!'
+
+        # Проверяем статус коннектора
+        STATUS=$$(curl -s -o /dev/null -w %{http_code} http://debezium_oltp:8083/connectors/postgres_oltp-connector)
+
+        if [ $$STATUS -eq 404 ]; then
+          echo 'Коннектор postgres_oltp-connector не найден. Отправляем конфиг...'
+          
+          curl -X POST -H 'Content-Type: application/json' --data @/tmp/postgres_oltp-connector.json http://debezium_oltp:8083/connectors
+          echo '\nКонец регистрации коннектора'
+        else
+          echo 'Коннектор postgres_oltp-connector уже существует (статус HTTP '$$STATUS'). Пропускаем создание.'
+        fi
+      "       
 
 networks:
   bionicpro-network:
@@ -219,3 +311,4 @@ volumes:
   clickhouse_data:
   minio_data:
   nginx_cdn_cache:
+  kafka_data:
