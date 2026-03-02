@@ -11,6 +11,7 @@
     "database.server.name": "bionicpro_oltp",
     "topic.prefix": "bionicpro_oltp",
     "plugin.name": "pgoutput",
+    "snapshot.mode": "initial",
     "table.include.list": "crm.users,crm.devices,telemetry.events",
     "decimal.handling.mode": "double",
     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
