@@ -57,7 +57,7 @@ public class ReportRepository {
     public Optional<LocalDateTime> findMaxUpdatedAt(String userId, LocalDate start, LocalDate end, boolean stream) {
         String marktName = stream ? "daily_user_reports_v2" : "daily_user_reports";
         String sql = String.format("""
-            SELECT MAX(updated_at)
+            SELECT MAX(toNullable(updated_at))
             FROM %s
             WHERE user_id = ? AND report_date BETWEEN ? AND ?
             """, marktName);
@@ -69,5 +69,11 @@ public class ReportRepository {
         );
 
         return Optional.ofNullable(maxUpdated);
+    }
+
+    public LocalDate findGlobalMaxReportDate(boolean stream) {
+        String marktName = stream ? "daily_user_reports_v2" : "daily_user_reports";
+        String sql = String.format("SELECT MAX(report_date) FROM %s", marktName);
+        return jdbcTemplate.queryForObject(sql, LocalDate.class);
     }
 }

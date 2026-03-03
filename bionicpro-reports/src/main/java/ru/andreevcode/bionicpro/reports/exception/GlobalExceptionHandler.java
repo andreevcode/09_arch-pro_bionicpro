@@ -25,4 +25,11 @@ public class GlobalExceptionHandler {
         log.warn("Validation failed: {}", e.getBindingResult().getAllErrors());
         return ResponseEntity.status(400).body("Invalid request parameters");
     }
+
+    // Ловим ошибки неготовности витрины
+    @ExceptionHandler(ReportPeriodNotReadyException.class)
+    public ResponseEntity<String> handlePeriodNotReady(ReportPeriodNotReadyException e) {
+        log.warn("Report data not ready: {}", e.getMessage());
+        return ResponseEntity.status(400).body(e.getMessage());
+    }
 }

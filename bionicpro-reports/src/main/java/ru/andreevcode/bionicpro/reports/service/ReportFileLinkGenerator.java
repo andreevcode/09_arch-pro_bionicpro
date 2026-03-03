@@ -17,13 +17,27 @@ public class ReportFileLinkGenerator {
         this.salt = salt;
     }
 
-    public String generateObjectKey(String userId, LocalDate startDate, LocalDate endDate, LocalDateTime maxUpdatedAt) {
+    public String generateObjectKey(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate,
+            LocalDateTime maxUpdatedAt
+            , boolean stream) {
         // Формируем базовую строку
-        String rawData = String.format("%s_%s_%s_%s_%s",
+        String rawParamsData = String.format("%s_%s_%s_%s_%s",
                 userId, startDate, endDate, maxUpdatedAt.toString(), salt);
 
-        // Хешируем SHA-256
-        return bytesToHex(hashSha256(rawData)).substring(0, 32) + ".json";
+        // Хешируем параметры с salt через SHA-256
+        String paramsHash = bytesToHex(hashSha256(rawParamsData)).substring(0, 32);
+
+        // Итоговый ключ: {userId}/{startDate}_{endDate}/{type}_{paramsHash}.json
+        return String.format("%s/%s_%s/%s_%s.json",
+                userId,
+                startDate.toString(),
+                endDate.toString(),
+                (stream ? "stream" : "batch"),
+                paramsHash
+        );
     }
 
     private byte[] hashSha256(String data) {

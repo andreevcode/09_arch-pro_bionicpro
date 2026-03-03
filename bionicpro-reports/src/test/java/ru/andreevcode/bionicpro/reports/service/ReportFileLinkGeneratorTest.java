@@ -18,12 +18,12 @@ class ReportFileLinkGeneratorTest {
         LocalDate end = LocalDate.of(2026, 2, 22);
         LocalDateTime updated = LocalDateTime.of(2026, 2, 23, 10, 0);
 
-        String key1 = generator.generateObjectKey(userId, start, end, updated);
-        String key2 = generator.generateObjectKey(userId, start, end, updated);
+        String key1 = generator.generateObjectKey(userId, start, end, updated, true);
+        String key2 = generator.generateObjectKey(userId, start, end, updated, true);
 
-        assertEquals(key1, key2, "Хеши должны совпадать для идентичных данных");
+        assertEquals(key1, key2, "Ключи должны совпадать для идентичных данных");
         assertTrue(key1.endsWith(".json"));
-        assertEquals(37, key1.length(), "Длина должна быть 32 символа хеша + 5 символов '.json'");
+        assertEquals("user-123/2026-02-20_2026-02-22/stream_5fae90e1292b1ad3c5831cd20648d070.json", key1, "Пути должны совпадать");
     }
 
     @Test
@@ -37,8 +37,8 @@ class ReportFileLinkGeneratorTest {
         // Airflow пересчитал данные через час
         LocalDateTime updatedNew = LocalDateTime.of(2026, 2, 23, 11, 0);
 
-        String keyOld = generator.generateObjectKey(userId, start, end, updatedOld);
-        String keyNew = generator.generateObjectKey(userId, start, end, updatedNew);
+        String keyOld = generator.generateObjectKey(userId, start, end, updatedOld, false);
+        String keyNew = generator.generateObjectKey(userId, start, end, updatedNew, false);
 
         assertNotEquals(keyOld, keyNew, "При изменении updated_at ссылка должна полностью поменяться (Cache Busting)");
     }
@@ -49,8 +49,8 @@ class ReportFileLinkGeneratorTest {
         LocalDate end = LocalDate.of(2026, 2, 22);
         LocalDateTime updated = LocalDateTime.of(2026, 2, 23, 10, 0);
 
-        String keyUser1 = generator.generateObjectKey("user-123", start, end, updated);
-        String keyUser2 = generator.generateObjectKey("user-999", start, end, updated);
+        String keyUser1 = generator.generateObjectKey("user-123", start, end, updated, true);
+        String keyUser2 = generator.generateObjectKey("user-999", start, end, updated, true);
 
         assertNotEquals(keyUser1, keyUser2, "Для разных пользователей должны генерироваться разные ссылки");
     }
