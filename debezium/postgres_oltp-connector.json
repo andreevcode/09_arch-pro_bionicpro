@@ -1,0 +1,26 @@
+{
+  "name": "postgres_oltp-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres_oltp",
+    "database.port": "5432",
+    "database.user": "admin",
+    "database.password": "admin_password",
+    "database.dbname": "bionicpro_oltp",
+    "database.server.name": "bionicpro_oltp",
+    "topic.prefix": "bionicpro_oltp",
+    "plugin.name": "pgoutput",
+    "snapshot.mode": "initial",
+    "table.include.list": "crm.users,crm.devices,telemetry.events",
+    "decimal.handling.mode": "double",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite"
+  }
+}

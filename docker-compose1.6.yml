@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  keycloak_db:
+    image: postgres:14
+    container_name: keycloak_db
+    environment:
+      POSTGRES_DB: keycloak_db
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - auth-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5.1
+    platform: linux/arm64
+    container_name: keycloak
+    env_file:
+      - ./keycloak/.env.secrets
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak_db
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+      KC_HEALTH_ENABLED: "true"
+    command: 
+      - start-dev
+      - --import-realm
+    volumes:
+#      - ./keycloak/realm-export1.4_with_no_ldap.json:/opt/keycloak/data/import/realm-export.json
+      - ./keycloak/realm-export1.6_yandex_oauth.json:/opt/keycloak/data/import/realm-export.json
+    ports:
+      - "8080:8080"
+    depends_on:
+      - keycloak_db
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-net
+
+  frontend:
+    build:
+      context: ./frontend_bff
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_BFF_URL: http://localhost:8081/api
+    networks:
+      - auth-net
+
+  bionicpro-auth:
+    build:
+      context: ./bionicpro-auth
+      dockerfile: Dockerfile
+    container_name: bionicpro-auth
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=1h3WfuhlvdQyMNqkz4SSNPZpMyt8sCT7
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/reports-realm
+      - REPORTS_BACKEND_URL=http://reports-backend:8000
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      openldap:
+          condition: service_started
+    networks:
+      - auth-net
+
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    platform: linux/arm64
+    ports:
+      - "389:389"
+      - "636:636"
+    environment:
+      LDAP_DOMAIN: "example.com"
+      LDAP_ADMIN_PASSWORD: "adminpassword"
+    command: --copy-service
+    volumes:
+      - ./ldap/config.ldif:/container/service/slapd/assets/config/bootstrap/ldif/01-custom-data.ldif
+    networks:
+      - auth-net
+
+networks:
+  auth-net:
+    driver: bridge
+
+volumes:
+  keycloak_db_data:
