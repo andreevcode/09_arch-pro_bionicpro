@@ -6,7 +6,7 @@
 >Решение должно учитывать и обеспечивать следующие аспекты:
 >
 >* Унификацию доступа в системе BionicPRO. Это будет осуществляться через запрос данных учётных записей из внешнего источника, который расположен в стране представительства компании. Принципы локального хранения персональной и медицинской информации не должны быть нарушены.
->* Безопасную схему работы с access- и refresh-токенами, которая исключает передачу фронтенду токенов, которые были получены от IdP.
+>* Безопасную схему работы с access- и refresh-токенами, которая исключает передачу фронтенду токенов, полученных от IdP.
 >* Возможность поддержки аутентификации пользователей через различные внешние удостоверяющие службы, действующие в разных странах.
 >
 >Для подготовки архитектуры решения используйте [draw.io](http://draw.io).
@@ -53,7 +53,7 @@
 1. Из-за того, что Keycloak 21.1 не стартовал в docker под apple silicon, необходимо обновить образ Keycloak до более свежей версии, например, 26.5.1.
 2. Реализовать `PKCE` между фронтом и Keycloak:
    - это дополнительная защита через механизм `code_verifier`, чтобы Keycloak удостоверился, что за токенами приходит именно тот, кто начинал процесс авторизации.
-   - для Keycloak 26.5.1 делать ничего не нужно, т.к. `PKCE` автоматически включено по умолчанию начиная с 24 версии;
+   - для Keycloak 26.5.1 делать ничего не нужно, т. к. `PKCE` автоматически включено по умолчанию начиная с 24 версии;
    - для старой версии нужно было бы поправить фронтовый код [App.tsx](../../frontend/src/App.tsx) примерно так:
 ```ts
     // useEffect выполнится один раз при загрузке страницы
@@ -71,26 +71,27 @@
    - запустится 3 контейнера - `frontend` для отдачи статики, `keycloak` и хранилище postgres `keycloak_db`.
    - конфигурация `keycloak` [/keycloak/realm-export.json](../../keycloak/realm-export.json) прогрузится при старте, в ней уже есть все тестовые пользователи и конфигурация фронтового клиента.
 2. На `localhost:3000` нажать кнопку логин, SPA отправит GET на `/auth` Keycloak. Среди полей будет `code_challenge` - хэш случайной строки `code_verifier`, которая пока что остается в браузере. Keycloak прикапывает `code_challenge` до момента запроса токенов, `code_challenge` это начало `PKCE`.
-   - <img src="images/01_SPA_to_keycloak_auth_pkce.png" width="700">
-3. После ввода логина и пароля одного из пользователей  [realm-export.json](../../keycloak/realm-export.json) Keycloak должен успешно аутентифицировать его и сделать редирект обратно на SPA (`redirect_uri`), возвращая при этом `code` для получения токенов.
-   - <img src="images/02_autentificate_code_to_SPA.png" width="700">
+    - <img src="images/01_SPA_to_keycloak_auth_pkce.png" width="700">
+3. После ввода логина и пароля одного из пользователей [realm-export.json](../../keycloak/realm-export.json) Keycloak должен успешно аутентифицировать его и сделать редирект обратно на SPA (`redirect_uri`), возвращая при этом `code` для получения токенов.
+    - <img src="images/02_autentificate_code_to_SPA.png" width="700">
 4. SPA идет c `POST` запросом за токенами `access_token, refresh_token` c кодом и `code_verifier` в ручку `/token`. Keycloak проверяет код, а также хэширует `code_verifier` и сравнивает с `code_challenge`, который он помнит, в случае успеха отдает токены назад SPA.
-   - <img src="images/03_spa_get_tokens_payload.png" width="700">
-   - <img src="images/04_spa_get_tokens_response.png" width="700">
-5. Токены хранит SPA.
-
-
+    - <img src="images/03_spa_get_tokens_payload.png" width="700">
+5. В текущей реализации приложения токены передаются на фронт и хранятся там. 
+    - что **не является безопасным решением** по современным представлениям;
+    - перенос токенов на бэкенд будет реализован в следующей Задаче 3;  
+    - <img src="images/04_spa_get_tokens_response.png" width="700">
+    
 ### 2.3 Детали проблемы с запуском старой версии Keycloak
 - контейнер Keycloak 21.1 не стартовал в docker под apple silicon;
 - попытка это исправить обернулась настоящим адом:
    - обновление до одной из последних версий `Keycloak-js: "^26.2.3"`, чтобы запустился контейнер Keycloak;
-   - далее оказалось, что на фронте в `ReportPage` в фрагменте кода `if (!Keycloak.authenticated)` объект Keycloak всегда оставался неаутентифицированным из-за того, что старая версия библиотеки `@react-Keycloak/web` не умеет работать с новым Keycloak;
+   - далее оказалось, что на фронте в `ReportPage` во фрагменте кода `if (!Keycloak.authenticated)` объект Keycloak всегда оставался неаутентифицированным из-за того, что старая версия библиотеки `@react-Keycloak/web` не умеет работать с новым Keycloak;
    - из-за этого после успешной авторизации не отрисовывалась кнопка `download report`, которая должна давать авторизованному пользователю доступ на будущий бизнес-бэкенд;
    - пришлось отказаться от устаревшей либы `@react-Keycloak/web` и написать замену `ReactKeycloakProvider`, а также самописный флажок `Keycloak.authenticated`;
    - далее выяснилось, что формат либы `Keycloak-js` поменялся и теперь она уже не собирается под сборщиком `"react-scripts": "5.0.1"`, который (сюрприз) тоже заброшен;
       - выяснилось, что отказаться от `react-scripts` было бы достаточно непросто из-за необходимости сильно менять конфиг сборки и вручную прописывать многие зависимости;
       - вместо этого использовал аннотацию `// @ts-ignore` и ручное приведение типов в нескольких местах, что, наверное, костыль для ts;
-- в цонце концто фронт собрался, и для авторизованного пользователя стал рисовать кнопку с бизнес-ручкой под капотом;
+- в конце концов фронт собрался, и для авторизованного пользователя стал рисовать кнопку с бизнес-ручкой под капотом;
 
 ## Задача 3. Повышение безопасности через перенос хранения токенов на бэкенд
 >1. Перенесите механизм запроса access- и refresh-токен из фронтенда в новый бэкенд-сервис, который реализует интеграцию с Keycloak и работу с сессиями.
@@ -120,7 +121,7 @@
       - в момент очередного запроса к BFF, если время действия `RT` закончилось;
       - каждые 30 мин, что больше времени максимально настроенного времени жизни `RT` (`ssoSessionMaxLifespan`) в Keycloak;
    - ротацию сессии и куки `JSESSIONID` пока действует `AT` для предотвращения Session Fixation Attack;
-      - для этого при очередном запросе (к бизнес-бэкенду, либо при завершении авторизации) в случае успешной валидации сессии`bionicpro-auth`  перепривязывает `AT` и `RT` к новому `JSESSIONID`, который он возвращает c кукой в ответе фронтенду;
+      - для этого при очередном запросе (к бизнес-бэкенду, либо при завершении авторизации) в случае успешной валидации сессии`bionicpro-auth`  перепривязывает `AT` и `RT` к новому `JSESSIONID`, который он возвращает с кукой в ответе фронтенду;
       - `Token Relay`: проксирование запросов к `reports-backend` с приклеиванием `AT`;
 3. Составлен обновленный конфиг `keycloak` [realm-export2.json](../../keycloak/realm-export2.json), куда внесены правки:
    - ограничения времени работы токенов в realm `reports-realm`:
@@ -144,7 +145,7 @@
         "directAccessGrantsEnabled": true
       }
     ```
-   - клиент OAuth2.0 внутри BFF (для подключения к Keycloak) настроен с соотвествующими кредами `clientId` и `secret` в Spring Security;
+   - клиент OAuth2.0 внутри BFF (для подключения к Keycloak) настроен с соответствующими кредами `clientId` и `secret` в Spring Security;
 
 4. Новая версия фронтового приложения [frontend_bff](../../frontend_bff) содержит такие правки:
    - убрано взаимодействие с `keycloak` и библиотека `Keycloak-js`;
@@ -270,7 +271,7 @@
         }
     }
     ```
-   - **не реализует автоматом** сброс сесcии при устаревании `RT`; пользователь остается по умолчанию залогиненным (с кукой), но без реальных прав, и Боб не перебросит его на кнопку с логином;
+   - **не реализует автоматом** сброс сессии при устаревании `RT`; пользователь остается по умолчанию залогиненным (с кукой), но без реальных прав, и Боб не перебросит его на кнопку с логином;
    - дефолтно тайм-аут сессии управляется сервлет-контейнером (Tomcat, Jetty), а не Spring Security и составляет 30 минут;
    - как тогда сбросить сессию?
       - можно поменять конфиг через Spring вот так:
@@ -292,7 +293,7 @@
 3. Для учебных целей в `bionicpro-auth` настроено логирование токенов при ротации. Логирование походов в ручку Keycloak сходу не вышло сделать, поэтому можно включить запись events в админке Keycloak (localhost:8080 admin-admin) и смотреть их там же в UI.
 4. При нажатии кнопки логин на `localhost:3000` (Боб) теперь идет в `bionicpro-auth` (Алису) на автоматическую ручку `/oauth2/autorizaion/` Spring Security. Далее `OAuth 2.0` клиент под капотом редиректит запрос на `/auth` Keycloak. Можно увидеть `code_challenge` для `PKCE`. Keycloak прикапывает `code_challenge`.
    - <img src="images/06_login_from_bob_to_alice_with_302_to_keycloak.png" width="700"/>
-5. После ввода логина и пароля одного из пользователей  [realm-export2.json](../../keycloak/realm-export.json) Keycloak должен успешно провести аутентификацию и сделать редирект обратно на Алису (`redirect_uri`) в автоматическую ручку `login/oauth2/code/keycloak`, возвращая при этом `code` для получения токенов.
+5. После ввода логина и пароля одного из пользователей [realm-export2.json](../../keycloak/realm-export.json) Keycloak должен успешно провести аутентификацию и сделать редирект обратно на Алису (`redirect_uri`) в автоматическую ручку `login/oauth2/code/keycloak`, возвращая при этом `code` для получения токенов.
    - <img src="images/07_1keycloak_autentificate_code_to_alice.png" width="700"/>
 6. Алиса под капотом идет за токенами `AT` и `RT` `POST` запросом с кодом `code_verifier`  в ручку `/token` Keycloak. Он проверяет код, хэширует `code_verifier` и сравнивает с `code_challenge`, который он помнит. В случае успеха отдает токены Алисе, которая редиректит браузер на Боба, одновременно передавая ему первый вариант `JSESSIONID`:
    - <img src="images/07_2alice_get_tokens_and_302_to_bob_with_first_jsessionid.png" width="650"/>   
@@ -337,7 +338,7 @@
 3. Альтернативный алгоритм настройки через UI Keycloak Федерации с нуля (тогда следует использовать предыдущий конфиг Keycloak или [realm-export1.4_with_no_ldap.json](../../keycloak/realm-export1.4_with_no_ldap.json)):
    - a. Создание провайдера.
       - Realm **reports-realm** → User federation → Add provider → **ldap**.
-      - **Пароль администратора:** задаётся переменной .
+      - **Пароль администратора:** задаётся переменной.
       - Keycloak использует тот же пароль для подключения к LDAP; при смене пароля обновите настройки User Federation в Keycloak (realm **reports-realm** → User federation → ldap → Settings → Bind credential).
       - **General options**:
         - UI display name: ldap
@@ -361,9 +362,9 @@
      - Mode **LDAP_ONLY** (было по дефолту)
 
 ### 4.2 Запуск и тестирование
-1. Удалим volume Keycloak хранилища из Задачи 3 `docker compose -f docker-compose1.3.yml down -v`, чтобы загрузить Keycloak с новым конфигом. Либо пропустить шаги 1-2 и настроить User Federation в UI по алгоритму выше.
+1. Удалим volume Keycloak хранилища из Задачи 3 `docker compose -f docker-compose1.3.yml down -v`, чтобы загрузить Keycloak с новым конфигом. Либо пропустить шаги 1–2 и настроить User Federation в UI по алгоритму выше.
 2. Стартуем все заново `docker compose -f docker-compose1.4.yml up -d`:
-   - запустится 5 контейнеров: `openldap`, `frontend` с новой версией фронта, `keycloak` (по умолчанию) c ldap-провайдером, хранилище postgres `keycloak_db` и `bionicpro-auth`;
+   - запустится 5 контейнеров: `openldap`, `frontend` с новой версией фронта, `keycloak` (по умолчанию) с ldap-провайдером, хранилище postgres `keycloak_db` и `bionicpro-auth`;
 3. Пробуем залогиниться под одним из пользователей ldap:
    - переходим в Keycloak, вводим креды из LDAP, например, `jane.smith/password` и под капотом Keycloak должен их проверить через LDAP;
    - далее стандартный флоу по получению токенов Алисой и отрисовкой бизнес-кнопки на Бобе;
@@ -372,21 +373,21 @@
    - пользователь LDAP в базе Keycloak:
    - <img src="images_4_ldap/04_ldap_user_in_keycloak_pg_db.png" width="900"/>
 
-## Задача 5. Настройка MFA
+## 5. Задача 5. Настройка MFA
 >1. Настройте в Keycloak механизм OTP-аутентификации.
 >2. Включите обязательный ввод одноразового пароля для всех пользователей.
 >3. Убедитесь, что под пользователем можно войти в систему только после ввода одноразового пароля из Google Authenticator или FreeOTP.
 
 ## 5.1 ADR 05. Подключение MFA
 1. Настройка ldap из предыдущего задания.
-2. Настройка обязательного шага OTP-аутентификации в UI keykloak:
-   - Создаем дубль текущего ` browser flow` **Autentifaction -> browser (Built-in) -> duplicate -> Назвать "Browser with MFA_OTP"**;
+2. Настройка обязательного шага OTP-аутентификации в UI keycloak:
+   - Создаем дубль текущего ` browser flow` **Authentication -> browser (Built-in) -> duplicate -> Назвать "Browser with MFA_OTP"**;
    - <img src="images_mfa/0_new_flow_created.png" width="600"/>
    - Создаем Required Step внутри **Browser with MFA_OTP forms -> Add execution -> Conditional OTP form -> Выбираем "Requirement=required**; новый step должен быть после **User Password Form**;
    - <img src="images_mfa/1_add_new_step1.png" width="750"/>
    - <img src="images_mfa/2_add_new_step2.png" width="500"/>
    - <img src="images_mfa/3_new_step_added.png" width="750"/>
-   - Включем новый Browser with MFA_OTP поток вместо встроенного Browser flow (built-in):  **Autentifaction -> выбрать Browser with MFA_OTP -> bind flow -> Browser Flow**
+   - Включим новый Browser with `MFA_OTP` поток вместо встроенного Browser flow (built-in):  **Authentication -> выбрать Browser with MFA_OTP -> bind flow -> Browser Flow**
    - <img src="images_mfa/4_new_flow_how_to_bind1.png" width="750"/>
    - <img src="images_mfa/5_new_flow_how_to_bind2.png" width="300"/>
    - <img src="images_mfa/6_new_flow_binded.png" width="750"/>
@@ -397,7 +398,7 @@
    - переходим в Keycloak, вводим креды из LDAP, например, `jane.smith/password` и под капотом Keycloak должен их проверить через LDAP;
    - получаем редирект на страничку регистрации OTP, сканируем qr код в `Яндекс.ID(Бывший яндекс.ключ)`;
    - <img src="images_mfa/7_top_setup_qr.png" width="1000"/>
-   - ввод кода из аутентификатора, Keycloak в случае упеха редиректит на Алису c кодом;
+   - ввод кода из аутентификатора, Keycloak в случае успеха редиректит на Алису с кодом;
    - <img src="images_mfa/8_requeried_action1.png" width="700"/>
    - <img src="images_mfa/8_required_action2.png" width="700"/>
    - далее стандартный флоу по получению токенов Алисой и отрисовкой бизнес-кнопки на Бобе;
@@ -433,7 +434,7 @@
 1. Удалим volume Keycloak хранилища из Задач 4 и 5 `docker compose -f docker-compose1.4.yml down -v`, чтобы загрузить Keycloak с новым конфигом.
 2. Подложить в [./keycloak/.env.secrets](../../keycloak/.env.secrets) 2 секрета:
     ```properties
-    YANDEX_OAUTH20_BIONICPRO_CLIENT_ID=<clietID>
+    YANDEX_OAUTH20_BIONICPRO_CLIENT_ID=<clientID>
     YANDEX_OAUTH20_BIONICPRO_CLIENT_SECRET=<clientSecret>
     ```
 3. Стартовать все заново `docker compose -f docker-compose1.6.yml up -d`:
@@ -444,7 +445,7 @@
    - <img src="yandex_oauth20/10_0_results_new_keykloak_yandex_button.png" width="350">
    - авторизуемся в ЯндексID любым доступным способом (логин, пароль, MFA) и при первом входе должно появиться окно подтверждения выдачи доступа для приложения ранее требуемым скоупам данных в `oauth.yandex.ru/owl/authorize/allow`;
    - <img src="yandex_oauth20/10_results_allow_yandex_page.png" width="300">
-   - после этого через несколько шагов через ручки Keycloak `/realms/reports-realm/login-actions/first-broker-login` и `/realms/reports-realm/broker/after-first-broker-login` keykloak наконец-то редиректит в уже известную авто-ручку Алису `login/oauth2/code/keycloak` c кодом;
+   - после этого через несколько шагов через ручки Keycloak `/realms/reports-realm/login-actions/first-broker-login` и `/realms/reports-realm/broker/after-first-broker-login` keykloak наконец-то редиректит в уже известную авто-ручку Алису `login/oauth2/code/keycloak` с кодом;
    - далее стандартный флоу по получению токенов Алисой и отрисовкой бизнес-кнопки на Бобе;
    - ответ ручки `/api/user/me` после LDAP авторизации показывет пользователя из Яндекс OAuth 2.0;
    - <img src="yandex_oauth20/11_results_logged_yandex_user_me_endpoint.png" width="900">
